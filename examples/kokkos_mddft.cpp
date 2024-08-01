@@ -21,10 +21,7 @@ int main(int argc, char* argv[]) {
     input(i) = 1;
     output(i) = 0;
   });
-  // double * lout = output.data();
-  // double * lin = input.data();
-  // double * lsym = symbol.data();
-  // std::vector<void*> args{&lout, &lin, &lsym};
+  
   std::vector<void*> args = [&]() {
       static auto output_data = output.data();
       static auto input_data = input.data();
