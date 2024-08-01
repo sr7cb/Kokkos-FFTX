@@ -11,7 +11,6 @@
 int main(int argc, char* argv[]) {
   Kokkos::initialize(argc,argv);
   {
-  std::cout << "hello world" << std::endl;
   int N = 32;
   Kokkos::View<double*, Kokkos::CudaUVMSpace> input("input", N*N*N*2);
   Kokkos::View<double*, Kokkos::CudaUVMSpace> output("output", N*N*N*2);
