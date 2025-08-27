@@ -19,5 +19,14 @@ target_link_libraries(${RCONV_TEST} PRIVATE Kokkos::kokkos nvrtc cuda)
 
 FFTX_add_includes_libs_to_target ( ${RCONV_TEST} )
 
+# -----------------------------------------------------------
+
+set(C2C_CONV_TEST FFTX_Kokkos_GPU_C2C_conv)
+
+add_executable (${C2C_CONV_TEST} FFTX_Kokkos_GPU_C2C_conv.cpp)
+target_compile_options(${C2C_CONV_TEST} PRIVATE -DFFTX_CUDA -I$ENV{CUDA_HOME}/include -I${HELPER_CUDA_LOC})
+target_link_libraries(${C2C_CONV_TEST} PRIVATE Kokkos::kokkos nvrtc cuda)
+
+FFTX_add_includes_libs_to_target ( ${C2C_CONV_TEST} )
 
 

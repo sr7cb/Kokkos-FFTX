@@ -17,6 +17,8 @@
 #include "mdprdftObj.hpp"
 #include "imdprdftObj.hpp"
 #include "rconvObj.hpp"
+#include "mddftObj.hpp"
+#include "imddftObj.hpp"
 
 
 int main(int argc, char* argv[]){
@@ -39,6 +41,9 @@ int main(int argc, char* argv[]){
       int cx = Nx/2;
       int cy = Ny/2;
       int cz = Nz/2;
+
+      // Using the Kokkos::complex instead of std::complex
+      using Complex = Kokkos::complex<double>;
 
       // 1D Kokkos view for the field with point charge
       Kokkos::View<double*, Kokkos::CudaSpace> Fpc_1D("Fvector", Nx*Ny*Nz);
@@ -73,6 +78,14 @@ int main(int argc, char* argv[]){
             // Kokkos::printf("F1D_dd[%d] = %f\n", index_dd, F1D_domaindouble[index_dd]);
         });
 
+      // // Convert to a complex array for performing complex to complex FFT convolution
+      // Kokkos::View<Complex*, Kokkos::CudaSpace> F1D_dd_cmplx("Fvector_complex", domaindouble_x * domaindouble_y * domaindouble_z);
+      
+      // Kokkos::parallel_for("convert_to_complex", Kokkos::RangePolicy<Kokkos::Cuda>(0, domaindouble_x * domaindouble_y * domaindouble_z), 
+      // KOKKOS_LAMBDA(const int i) {
+      //   F1D_dd_cmplx(i) = Complex(F1D_domaindouble(i), 0.0);
+      //   // printf("real_F1D[%d] = %f, complex_F1D[%d] = (%f,%f)\n", i, F1D_domaindouble[i], i, F1D_dd_cmplx(i).real(), F1D_dd_cmplx(i).imag());
+      // });
 
       // Lattice Green's function
       std::ifstream infileLGF("/home/h82/Documents/Bluestone/P3M/MLC_PPM/LatticeGreensFunction/exec/G_64_Octant");
@@ -174,7 +187,6 @@ int main(int argc, char* argv[]){
     Kokkos::deep_copy(dev_LGF, host_LGF);
 
     // Defining data vectors required for forward DFT in FFTX as Kokkos views
-    using Complex = Kokkos::complex<double>;
     Kokkos::View<Complex*, Kokkos::CudaSpace> symbol("symbol_view", domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1));
     Kokkos::View<double*, Kokkos::CudaSpace> dummy1("dummy1_view", domaindouble_x * domaindouble_y * domaindouble_z);
  
@@ -185,7 +197,7 @@ int main(int argc, char* argv[]){
         return std::vector<void*>{&symbol_data, &lgf_data, &dummy1_data};
     }();
 
-    // Computing DFT of Lattice Greens Function values and storing it in symbol
+    // Computing DFT of Lattice Green's Function values and storing it in symbol
     std::vector<int> sizes{domaindouble_x, domaindouble_y, domaindouble_z};
     MDPRDFTProblem r2cdft{args1, sizes, "mdprdft"};
     r2cdft.transform();
@@ -200,7 +212,7 @@ int main(int argc, char* argv[]){
     //--------------------------------------------------------------//
 //--------------------------------------------------------------//
 // ************* Using RConv function in FFTX *****************//
- // Using RConv function in FFTX to compute convolution between symbol and F1D_domaindouble
+//  // Using RConv function in FFTX to compute convolution between symbol and F1D_domaindouble
 //  Kokkos::View<double*, Kokkos::CudaSpace> out_idft("Rconv output", domaindouble_x * domaindouble_y * domaindouble_z);
 //  std::vector<void*> args4 = [&]() {
 //       static auto output_data = out_idft.data();
@@ -230,8 +242,8 @@ int main(int argc, char* argv[]){
     }();
 
     std::vector<int> sizes2{domaindouble_x, domaindouble_y, domaindouble_z};
-    MDPRDFTProblem r2cdft2{args2, sizes2, "mdprdft"};
-    r2cdft2.transform();
+    MDDFTProblem c2cdft2{args2, sizes2, "mdprdft"};
+    c2cdft2.transform();
 
     // Kokkos::parallel_for("Print F1DDFT", Kokkos::RangePolicy<Kokkos::Cuda>(0, domaindouble_x * domaindouble_y * ((domaindouble_z/2)+1)), 
     //     KOKKOS_LAMBDA(const int i) {
@@ -268,8 +280,14 @@ int main(int argc, char* argv[]){
     }();
 
     std::vector<int> sizes3{domaindouble_x, domaindouble_y, domaindouble_z};
-    IMDPRDFTProblem c2rdft{args3, sizes3, "imdprdft"};
-    c2rdft.transform();
+    IMDDFTProblem c2cdft{args3, sizes3, "imdprdft"};
+    c2cdft.transform();
+
+    // Kokkos::parallel_for("Print IF1DDFT", Kokkos::RangePolicy<Kokkos::Cuda>(0, domaindouble_x * domaindouble_y * domaindouble_z), 
+    //     KOKKOS_LAMBDA(const int i) {
+    //         // printf("i = %d", i);
+    //         printf("IF1D_DFT[%d] = %f\n", i, out_idft[i]);
+    //     });
 
     //**************** END of INDIVIDUAL FUNCTIONS ****************************//
     //--------------------------------------------------------------//
